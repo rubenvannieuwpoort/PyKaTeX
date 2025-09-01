@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pykatex"  # TODO(Ruben): Capitalization?
+version = "0.0.1"
+description = "TODO"
+readme = "README.md"
+authors = [
+  {name = "Ruben van Nieuwpoort", email = "ruben@vannieuwpoort.dev"},
+]
+
+[tool.setuptools]
+ext-modules = [
+  {name = "pykatex", sources = ["src/pykatex.c", "src/katex.c"], include-dirs=["src/quickjs"]}
+]
