@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools"]  # TODO(Ruben): does "wheel" need to be in here?
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,7 +11,3 @@ authors = [
   {name = "Ruben van Nieuwpoort", email = "ruben@vannieuwpoort.dev"},
 ]
 
-[tool.setuptools]
-ext-modules = [
-  {name = "pykatex", sources = ["src/pykatex.c", "src/katex.c"], include-dirs=["src/quickjs"]}
-]
