@@ -10,7 +10,7 @@ pykatex_ext = Extension(
         "src/quickjs/libregexp.c",
         "src/quickjs/libunicode.c",
         "src/quickjs/cutils.c",
-        "src/quickjs/dtoa.c"
+        "src/quickjs/xsum.c"
     ],
     include_dirs=["src/quickjs"],
     define_macros=[

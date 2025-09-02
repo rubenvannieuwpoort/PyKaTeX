@@ -82,10 +82,10 @@ DEF(Egyptian_Hieroglyphs, "Egyp")
 DEF(Elbasan, "Elba")
 DEF(Elymaic, "Elym")
 DEF(Ethiopic, "Ethi")
-DEF(Garay, "Gara")
 DEF(Georgian, "Geor")
 DEF(Glagolitic, "Glag")
 DEF(Gothic, "Goth")
+DEF(Garay, "Gara")
 DEF(Grantha, "Gran")
 DEF(Greek, "Grek")
 DEF(Gujarati, "Gujr")
@@ -290,7 +290,6 @@ DEF(Grapheme_Extend, "Gr_Ext")
 DEF(ID_Continue, "IDC")
 DEF(ID_Compat_Math_Start, "")
 DEF(ID_Compat_Math_Continue, "")
-DEF(InCB, "")
 DEF(Lowercase, "Lower")
 DEF(Math, "")
 DEF(Uppercase, "Upper")
@@ -299,5 +298,8 @@ DEF(XID_Start, "XIDS")
 
 /* internal tables with index */
 DEF(Cased1, "")
+
+/* unused by us */
+DEF(InCB, "")
 
 #endif

@@ -1,79 +1,116 @@
-"use strict";
+import * as os from "qjs:os";
+import { assert, assertThrows } from "./assert.js";
 
-var status = 0;
-var throw_errors = true;
-
-function throw_error(msg) {
-    if (throw_errors)
-        throw Error(msg);
-    console.log(msg);
-    status = 1;
-}
-
-function assert(actual, expected, message) {
-    function get_full_type(o) {
-        var type = typeof(o);
-        if (type === 'object') {
-            if (o === null)
-                return 'null';
-            if (o.constructor && o.constructor.name)
-                return o.constructor.name;
-        }
-        return type;
-    }
-
-    if (arguments.length == 1)
-        expected = true;
-
-    if (typeof actual === typeof expected) {
-        if (actual === expected) {
-            if (actual !== 0 || (1 / actual) === (1 / expected))
-                return;
-        }
-        if (typeof actual === 'number') {
-            if (isNaN(actual) && isNaN(expected))
-                return true;
-        }
-        if (typeof actual === 'object') {
-            if (actual !== null && expected !== null
-            &&  actual.constructor === expected.constructor
-            &&  actual.toString() === expected.toString())
-                return;
-        }
-    }
-    // Should output the source file and line number and extract
-    //   the expression from the assert call
-    throw_error("assertion failed: got " +
-                get_full_type(actual) + ":|" + actual + "|, expected " +
-                get_full_type(expected) + ":|" + expected + "|" +
-                (message ? " (" + message + ")" : ""));
-}
-
-function assert_throws(expected_error, func)
+// Keep this at the top; it tests source positions.
+function test_exception_source_pos()
 {
-    var err = false;
+    var e;
+
     try {
-        func();
-    } catch(e) {
-        err = true;
-        if (!(e instanceof expected_error)) {
-            // Should output the source file and line number and extract
-            //   the expression from the assert_throws() call
-            throw_error("unexpected exception type");
-            return;
-        }
+        throw new Error(""); // line 10, column 19
+    } catch(_e) {
+        e = _e;
     }
-    if (!err) {
-        // Should output the source file and line number and extract
-        //   the expression from the assert_throws() call
-        throw_error("expected exception");
-    }
+
+    assert(e.stack.includes("test_builtin.js:10:19"));
 }
 
-// load more elaborate version of assert if available
-try { __loadScript("test_assert.js"); } catch(e) {}
+// Keep this at the top; it tests source positions.
+function test_function_source_pos() // line 19, column 1
+{
+    function inner() {} // line 21, column 5
+    var f = eval("function f() {} f");
+    assert(`${test_function_source_pos.lineNumber}:${test_function_source_pos.columnNumber}`, "19:1");
+    assert(`${inner.lineNumber}:${inner.columnNumber}`, "21:5");
+    assert(`${f.lineNumber}:${f.columnNumber}`, "1:1");
+}
 
-/*----------------*/
+// Keep this at the top; it tests source positions.
+function test_exception_prepare_stack()
+{
+    var e;
+
+    Error.prepareStackTrace = (_, frames) => {
+        // Just return the array to check.
+        return frames;
+    };
+
+    try {
+        throw new Error(""); // line 39, column 19
+    } catch(_e) {
+        e = _e;
+    }
+
+    Error.prepareStackTrace = undefined;
+
+    assert(e.stack.length, 2);
+    const f = e.stack[0];
+    assert(f.getFunctionName(), 'test_exception_prepare_stack');
+    assert(f.getFileName().endsWith('test_builtin.js'));
+    assert(f.getLineNumber(), 39);
+    assert(f.getColumnNumber(), 19);
+    assert(!f.isNative());
+}
+
+// Keep this at the top; it tests source positions.
+function test_exception_stack_size_limit()
+{
+    var e;
+
+    Error.stackTraceLimit = 1;
+    Error.prepareStackTrace = (_, frames) => {
+        // Just return the array to check.
+        return frames;
+    };
+
+    try {
+        throw new Error(""); // line 67, column 19
+    } catch(_e) {
+        e = _e;
+    }
+
+    Error.stackTraceLimit = 10;
+    Error.prepareStackTrace = undefined;
+
+    assert(e.stack.length, 1);
+    const f = e.stack[0];
+    assert(f.getFunctionName(), 'test_exception_stack_size_limit');
+    assert(f.getFileName().endsWith('test_builtin.js'));
+    assert(f.getLineNumber(), 67);
+    assert(f.getColumnNumber(), 19);
+    assert(!f.isNative());
+}
+
+function test_exception_capture_stack_trace()
+{
+  var o = {};
+
+  assertThrows(TypeError, (function() {
+      Error.captureStackTrace();
+  }));
+
+  Error.captureStackTrace(o);
+
+  assert(typeof o.stack === 'string');
+  assert(o.stack.includes('test_exception_capture_stack_trace'));
+}
+
+function test_exception_capture_stack_trace_filter()
+{
+  var o = {};
+  const fun1 = () => { fun2(); };
+  const fun2 = () => { fun3(); };
+  const fun3 = () => { log_stack(); };
+  function log_stack() {
+      Error.captureStackTrace(o, fun3);
+  }
+  fun1();
+
+  Error.captureStackTrace(o);
+
+  assert(!o.stack.includes('fun3'));
+  assert(!o.stack.includes('log_stack'));
+}
 
 function my_func(a, b)
 {
@@ -104,7 +141,7 @@ function test_function()
     r = (function () { return 1; }).apply(null, undefined);
     assert(r, 1);
 
-    assert_throws(TypeError, (function() {
+    assertThrows(TypeError, (function() {
         Reflect.apply((function () { return 1; }), null, undefined);
     }));
 
@@ -169,6 +206,8 @@ function test()
     assert(Object.isExtensible(a), false, "extensible");
     assert(typeof a.y, "undefined", "extensible");
     assert(err, true, "extensible");
+
+    assertThrows(TypeError, () => Object.setPrototypeOf(Object.prototype, {}));
 }
 
 function test_enum()
@@ -353,9 +392,9 @@ function test_math()
     assert(Math.imul((-2)**31, (-2)**31), 0);
     assert(Math.imul(2**31-1, 2**31-1), 1);
     assert(Math.fround(0.1), 0.10000000149011612);
-    assert(Math.hypot(), 0);
-    assert(Math.hypot(-2), 2);
-    assert(Math.hypot(3, 4), 5);
+    assert(Math.hypot() == 0);
+    assert(Math.hypot(-2) == 2);
+    assert(Math.hypot(3, 4) == 5);
     assert(Math.abs(Math.hypot(3, 4, 5) - 7.0710678118654755) <= 1e-15);
 }
 
@@ -388,15 +427,10 @@ function test_number()
     assert((-25).toExponential(0), "-3e+1");
     assert((2.5).toPrecision(1), "3");
     assert((-2.5).toPrecision(1), "-3");
-    assert((25).toPrecision(1) === "3e+1");
     assert((1.125).toFixed(2), "1.13");
     assert((-1.125).toFixed(2), "-1.13");
     assert((0.5).toFixed(0), "1");
     assert((-0.5).toFixed(0), "-1");
-    assert((-1e-10).toFixed(0), "-0");
-
-    assert((1.3).toString(7), "1.2046204620462046205");
-    assert((1.3).toString(35), "1.ahhhhhhhhhm");
 }
 
 function test_eval2()
@@ -413,6 +447,20 @@ function test_eval2()
     f1(g);
     f2(g);
     assert(g_call_count, 2);
+    var e;
+    try {
+        new class extends Object {
+            constructor() {
+                (() => {
+                    for (const _ in this);
+                    eval("");
+                })();
+            }
+        };
+    } catch (_e) {
+        e = _e;
+    }
+    assert(e?.message, "this is not initialized");
 }
 
 function test_eval()
@@ -454,7 +502,7 @@ function test_eval()
 
 function test_typed_array()
 {
-    var buffer, a, i, str;
+    var buffer, a, i, str, b;
 
     a = new Uint8Array(4);
     assert(a.length, 4);
@@ -489,6 +537,9 @@ function test_typed_array()
     a = new Uint16Array(buffer, 2);
     a[0] = -1;
 
+    a = new Float16Array(buffer, 8, 1);
+    a[0] = 1;
+
     a = new Float32Array(buffer, 8, 1);
     a[0] = 1;
 
@@ -507,66 +558,17 @@ function test_typed_array()
     assert(a.toString(), "1,2,3,4");
     a.set([10, 11], 2);
     assert(a.toString(), "1,2,10,11");
-}
 
-/* return [s, line_num, col_num] where line_num and col_num are the
-   position of the '@' character in 'str'. 's' is str without the '@'
-   character */
-function get_string_pos(str)
-{
-    var p, line_num, col_num, s, q, r;
-    p = str.indexOf('@');
-    assert(p >= 0, true);
-    q = 0;
-    line_num = 1;
-    for(;;) {
-        r = str.indexOf('\n', q);
-        if (r < 0 || r >= p)
-            break;
-        q = r + 1;
-        line_num++;
-    }
-    col_num = p - q + 1;
-    s = str.slice(0, p) + str.slice(p + 1);
-    return [s, line_num, col_num];
-}
-
-function check_error_pos(e, expected_error, line_num, col_num, level)
-{
-    var expected_pos, tab, line;
-    level |= 0;
-    expected_pos = ":" + line_num + ":" + col_num;
-    tab = e.stack.split("\n");
-    line = tab[level];
-    if (line.slice(-1) == ')')
-        line = line.slice(0, -1);
-    if (line.indexOf(expected_pos) < 0) {
-        throw_error("unexpected line or column number. error=" + e.message +
-                    ".got |" + line + "|, expected |" + expected_pos + "|");
-    }
-}
-
-function assert_json_error(str, line_num, col_num)
-{
-    var err = false;
-    var expected_pos, tab;
-
-    tab = get_string_pos(str);
-    
-    try {
-        JSON.parse(tab[0]);
-    } catch(e) {
-        err = true;
-        if (!(e instanceof SyntaxError)) {
-            throw_error("unexpected exception type");
-            return;
-        }
-        /* XXX: the way quickjs returns JSON errors is not similar to Node or spiderMonkey */
-        check_error_pos(e, SyntaxError, tab[1], tab[2]);
-    }
-    if (!err) {
-        throw_error("expected exception");
-    }
+    a = new Uint8Array(buffer, 0, 4);
+    a.constructor = {
+      [Symbol.species]: function (len) {
+        return new Uint8Array(buffer, 1, len);
+      },
+    };
+    b = a.slice();
+    assert(a.buffer, b.buffer);
+    assert(a.toString(), "0,0,0,255");
+    assert(b.toString(), "0,0,255,255");
 }
 
 function test_json()
@@ -592,9 +594,6 @@ function test_json()
   3
  ]
 ]`);
-
-    assert_json_error('\n"  @\\x"');
-    assert_json_error('\n{ "a": @x }"');
 }
 
 function test_date()
@@ -609,11 +608,26 @@ function test_date()
     // Hence the fractional part after . should have 3 digits and how
     // a different number of digits is handled is implementation defined.
     assert(Date.parse(""), NaN);
+    assert(Date.parse("13"), NaN);
+    assert(Date.parse("31"), NaN);
+    assert(Date.parse("1000"), -30610224000000);
+    assert(Date.parse("1969"), -31536000000);
+    assert(Date.parse("1970"), 0);
     assert(Date.parse("2000"), 946684800000);
+    assert(Date.parse("9999"), 253370764800000);
+    assert(Date.parse("275761"), NaN);
+    assert(Date.parse("999999"), NaN);
+    assert(Date.parse("1000000000"), NaN);
+    assert(Date.parse("-271821"), NaN);
+    assert(Date.parse("-271820"), -8639977881600000);
+    assert(Date.parse("-100000"), -3217862419200000);
+    assert(Date.parse("+100000"), 3093527980800000);
+    assert(Date.parse("+275760"), 8639977881600000);
+    assert(Date.parse("+275761"), NaN);
     assert(Date.parse("2000-01"), 946684800000);
     assert(Date.parse("2000-01-01"), 946684800000);
-    //assert(Date.parse("2000-01-01T"), NaN);
-    //assert(Date.parse("2000-01-01T00Z"), NaN);
+    assert(Date.parse("2000-01-01T"), NaN);
+    assert(Date.parse("2000-01-01T00Z"), NaN);
     assert(Date.parse("2000-01-01T00:00Z"), 946684800000);
     assert(Date.parse("2000-01-01T00:00:00Z"), 946684800000);
     assert(Date.parse("2000-01-01T00:00:00.1Z"), 946684800100);
@@ -686,7 +700,7 @@ function test_date()
     assert(Date.UTC(2017, 9, 22, 18, 10, 11, 91, NaN), 1508695811091);
 
     // TODO: Fix rounding errors on Windows/Cygwin.
-    if (!(typeof os !== 'undefined' && ['win32', 'cygwin'].includes(os.platform))) {
+    if (!['win32', 'cygwin'].includes(os.platform)) {
         // from test262/test/built-ins/Date/UTC/fp-evaluation-order.js
         assert(Date.UTC(1970, 0, 1, 80063993375, 29, 1, -288230376151711740), 29312,
                'order of operations / precision in MakeTime');
@@ -698,6 +712,14 @@ function test_date()
     assert(Date.UTC(2017, 9, 22, 18 - 1e10, 10 + 60e10), 1508695800000);
     assert(Date.UTC(2017, 9, 22, 18, 10 - 1e10, 11 + 60e10), 1508695811000);
     assert(Date.UTC(2017, 9, 22, 18, 10, 11 - 1e12, 91 + 1000e12), 1508695811091);
+    assert(new Date("2024 Apr 7 1:00 AM").toLocaleString(), "04/07/2024, 01:00:00 AM");
+    assert(new Date("2024 Apr 7 2:00 AM").toLocaleString(), "04/07/2024, 02:00:00 AM");
+    assert(new Date("2024 Apr 7 11:00 AM").toLocaleString(), "04/07/2024, 11:00:00 AM");
+    assert(new Date("2024 Apr 7 12:00 AM").toLocaleString(), "04/07/2024, 12:00:00 AM");
+    assert(new Date("2024 Apr 7 1:00 PM").toLocaleString(), "04/07/2024, 01:00:00 PM");
+    assert(new Date("2024 Apr 7 2:00 PM").toLocaleString(), "04/07/2024, 02:00:00 PM");
+    assert(new Date("2024 Apr 7 11:00 PM").toLocaleString(), "04/07/2024, 11:00:00 PM");
+    assert(new Date("2024 Apr 7 12:00 PM").toLocaleString(), "04/07/2024, 12:00:00 PM");
 }
 
 function test_regexp()
@@ -735,9 +757,25 @@ function test_regexp()
 
     assert(/{1a}/.toString(), "/{1a}/");
     a = /a{1+/.exec("a{11");
-    assert(a, ["a{11"]);
+    assert(a, ["a{11"] );
+
+    eval("/[a-]/");  // accepted with no flag
+    eval("/[a-]/u"); // accepted with 'u' flag
+
+    let ex;
+    try {
+        eval("/[a-]/v"); // rejected with 'v' flag
+    } catch (_ex) {
+        ex = _ex;
+    }
+    assert(ex?.message, "invalid class range");
+
+    eval("/[\\-]/");
+    eval("/[\\-]/u");
 
     /* test zero length matches */
+    a = /()*?a/.exec(",");
+    assert(a, null);
     a = /(?:(?=(abc)))a/.exec("abc");
     assert(a, ["a", "abc"]);
     a = /(?:(?=(abc)))?a/.exec("abc");
@@ -746,8 +784,8 @@ function test_regexp()
     assert(a, ["a", undefined]);
     a = /(?:|[\w])+([0-9])/.exec("123a23");
     assert(a, ["123a23", "3"]);
-    a = /()*?a/.exec(",");
-    assert(a, null);
+    a = "ab".split(/(c)*/);
+    assert(a, ["a", undefined, "b"]);
 }
 
 function test_symbol()
@@ -782,26 +820,25 @@ function test_symbol()
     assert(b.toString(), "Symbol(aaa)");
 }
 
-function test_map1(key_type, n)
+function test_map()
 {
-    var a, i, tab, o, v;
+    var a, i, n, tab, o, v;
+    n = 1000;
+
+    a = new Map();
+    for (var i = 0; i < n; i++) {
+        a.set(i, i);
+    }
+    a.set(-2147483648, 1);
+    assert(a.get(-2147483648), 1);
+    assert(a.get(-2147483647 - 1), 1);
+    assert(a.get(-2147483647.5 - 0.5), 1);
+
     a = new Map();
     tab = [];
     for(i = 0; i < n; i++) {
         v = { };
-        switch(key_type) {
-        case "small_bigint":
-            o = BigInt(i);
-            break;
-        case "bigint":
-            o = BigInt(i) + (1n << 128n);
-            break;
-        case "object":
-            o = { id: i };
-            break;
-        default:
-            assert(false);
-        }
+        o = { id: i };
         tab[i] = [o, v];
         a.set(o, v);
     }
@@ -822,126 +859,54 @@ function test_map1(key_type, n)
     assert(a.size, 0);
 }
 
-function test_map()
-{
-    var a, i, n, tab, o, v;
-    n = 1000;
-
-    a = new Map();
-    for (var i = 0; i < n; i++) {
-        a.set(i, i);
-    }
-    a.set(-2147483648, 1);
-    assert(a.get(-2147483648), 1);
-    assert(a.get(-2147483647 - 1), 1);
-    assert(a.get(-2147483647.5 - 0.5), 1);
-
-    a.set(1n, 1n);
-    assert(a.get(1n), 1n);
-    assert(a.get(2n**1000n - (2n**1000n - 1n)), 1n);
-
-    test_map1("object", n);
-    test_map1("small_bigint", n);
-    test_map1("bigint", n);
-}
-
 function test_weak_map()
 {
-    var a, i, n, tab, o, v, n2;
+    var a, e, i, n, tab, o, v, n2;
     a = new WeakMap();
     n = 10;
     tab = [];
+    for (const k of [null, 42, "no", Symbol.for("forbidden")]) {
+        e = undefined;
+        try {
+            a.set(k, 42);
+        } catch (_e) {
+            e = _e;
+        }
+        assert(!!e);
+        assert(e.message, "invalid value used as WeakMap key");
+    }
     for(i = 0; i < n; i++) {
         v = { };
-        if (i & 1)
-            o = Symbol("x" + i);
-        else
-            o = { id: i };
+        o = { id: i };
         tab[i] = [o, v];
         a.set(o, v);
     }
     o = null;
 
-    n2 = 5;
+    n2 = n >> 1;
     for(i = 0; i < n2; i++) {
         a.delete(tab[i][0]);
     }
     for(i = n2; i < n; i++) {
         tab[i][0] = null; /* should remove the object from the WeakMap too */
     }
-    std.gc();
     /* the WeakMap should be empty here */
 }
 
-function test_weak_map_cycles()
+function test_weak_set()
 {
-    const weak1 = new WeakMap();
-    const weak2 = new WeakMap();
-    function createCyclicKey() {
-        const parent = {};
-        const child = {parent};
-        parent.child = child;
-        return child;
+    var a, e;
+    a = new WeakSet();
+    for (const k of [null, 42, "no", Symbol.for("forbidden")]) {
+        e = undefined;
+        try {
+            a.add(k);
+        } catch (_e) {
+            e = _e;
+        }
+        assert(!!e);
+        assert(e.message, "invalid value used as WeakSet key");
     }
-    function testWeakMap() {
-        const cyclicKey = createCyclicKey();
-        const valueOfCyclicKey = {};
-        weak1.set(cyclicKey, valueOfCyclicKey);
-        weak2.set(valueOfCyclicKey, 1);
-    }
-    testWeakMap();
-    // Force to free cyclicKey.
-    std.gc();
-    // Here will cause sigsegv because [cyclicKey] and [valueOfCyclicKey] in [weak1] was free,
-    // but weak2's map record was not removed, and it's key refers [valueOfCyclicKey] which is free.
-    weak2.get({});
-    std.gc();
-}
-
-function test_weak_ref()
-{
-    var w1, w2, o, i;
-
-    for(i = 0; i < 2; i++) {
-        if (i == 0)
-            o = { };
-        else
-            o = Symbol("x");
-        w1 = new WeakRef(o);
-        assert(w1.deref(), o);
-        w2 = new WeakRef(o);
-        assert(w2.deref(), o);
-        
-        o = null;
-        assert(w1.deref(), undefined);
-        assert(w2.deref(), undefined);
-        std.gc();
-        assert(w1.deref(), undefined);
-        assert(w2.deref(), undefined);
-    }
-}
-
-function test_finalization_registry()
-{
-    {
-        let expected = {};
-        let actual;
-        let finrec = new FinalizationRegistry(v => { actual = v });
-        finrec.register({}, expected);
-        os.setTimeout(() => {
-            assert(actual, expected);
-        }, 0);
-    }
-    {
-        let expected = 42;
-        let actual;
-        let finrec = new FinalizationRegistry(v => { actual = v });
-        finrec.register({}, expected);
-        os.setTimeout(() => {
-            assert(actual, expected);
-        }, 0);
-    }
-    std.gc();
 }
 
 function test_generator()
@@ -1003,114 +968,109 @@ function test_generator()
     assert(v.value === 6 && v.done === true);
 }
 
-function rope_concat(n, dir)
+function test_proxy_iter()
 {
-    var i, s;
-    s = "";
-    if (dir > 0) {
-        for(i = 0; i < n; i++)
-            s += String.fromCharCode(i & 0xffff);
+    const p = new Proxy({}, {
+        getOwnPropertyDescriptor() {
+            return {configurable: true, enumerable: true, value: 42};
+        },
+        ownKeys() {
+            return ["x", "y"];
+        },
+    });
+    const a = [];
+    for (const x in p) a.push(x);
+    assert(a[0], "x");
+    assert(a[1], "y");
+}
+
+/* CVE-2023-31922 */
+function test_proxy_is_array()
+{
+  for (var r = new Proxy([], {}), y = 0; y < 331072; y++)
+      r = new Proxy(r, {});
+
+  try {
+    /* Without ASAN */
+    assert(Array.isArray(r));
+  } catch(e) {
+    /* With ASAN expect RangeError "Maximum call stack size exceeded" to be raised */
+    if (e instanceof RangeError) {
+      assert(e.message, "Maximum call stack size exceeded", "Stack overflow error was not raised")
     } else {
-        for(i = n - 1; i >= 0; i--)
-            s = String.fromCharCode(i & 0xffff) + s;
+      throw e;
     }
-    
-    for(i = 0; i < n; i++) {
-        /* test before the assert to go faster */
-        if (s.charCodeAt(i) != (i & 0xffff)) {
-            assert(s.charCodeAt(i), i & 0xffff);
-        }
+  }
+}
+
+function test_finalization_registry()
+{
+    {
+        let expected = {};
+        let actual;
+        let finrec = new FinalizationRegistry(v => { actual = v });
+        finrec.register({}, expected);
+        queueMicrotask(() => {
+            assert(actual, expected);
+        });
+    }
+    {
+        let expected = 42;
+        let actual;
+        let finrec = new FinalizationRegistry(v => { actual = v });
+        finrec.register({}, expected);
+        queueMicrotask(() => {
+            assert(actual, expected);
+        });
     }
 }
 
-function test_rope()
+function test_cur_pc()
 {
-    rope_concat(100000, 1);
-    rope_concat(100000, -1);
-}
+    var a = [];
+    Object.defineProperty(a, '1', {
+            get: function() { throw Error("a[1]_get"); },
+            set: function(x) { throw Error("a[1]_set"); }
+            });
+    assertThrows(Error, function() { return a[1]; });
+    assertThrows(Error, function() { a[1] = 1; });
+    assertThrows(Error, function() { return [...a]; });
+    assertThrows(Error, function() { return ({...b} = a); });
 
-function eval_error(eval_str, expected_error, level)
-{
-    var err = false;
-    var expected_pos, tab;
+    var o = {};
+    Object.defineProperty(o, 'x', {
+            get: function() { throw Error("o.x_get"); },
+            set: function(x) { throw Error("o.x_set"); }
+            });
+    o.valueOf = function() { throw Error("o.valueOf"); };
+    assertThrows(Error, function() { return +o; });
+    assertThrows(Error, function() { return -o; });
+    assertThrows(Error, function() { return o+1; });
+    assertThrows(Error, function() { return o-1; });
+    assertThrows(Error, function() { return o*1; });
+    assertThrows(Error, function() { return o/1; });
+    assertThrows(Error, function() { return o%1; });
+    assertThrows(Error, function() { return o**1; });
+    assertThrows(Error, function() { return o<<1; });
+    assertThrows(Error, function() { return o>>1; });
+    assertThrows(Error, function() { return o>>>1; });
+    assertThrows(Error, function() { return o&1; });
+    assertThrows(Error, function() { return o|1; });
+    assertThrows(Error, function() { return o^1; });
+    assertThrows(Error, function() { return o<1; });
+    assertThrows(Error, function() { return o==1; });
+    assertThrows(Error, function() { return o++; });
+    assertThrows(Error, function() { return o--; });
+    assertThrows(Error, function() { return ++o; });
+    assertThrows(Error, function() { return --o; });
+    assertThrows(Error, function() { return ~o; });
 
-    tab = get_string_pos(eval_str);
-    
-    try {
-        eval(tab[0]);
-    } catch(e) {
-        err = true;
-        if (!(e instanceof expected_error)) {
-            throw_error("unexpected exception type");
-            return;
-        }
-        check_error_pos(e, expected_error, tab[1], tab[2], level);
-    }
-    if (!err) {
-        throw_error("expected exception");
-    }
-}
-
-var poisoned_number = {
-    valueOf: function() { throw Error("poisoned number") },
-};
-
-function test_line_column_numbers()
-{
-    var f, e, tab;
-
-    /* The '@' character provides the expected position of the
-       error. It is removed before evaluating the string. */
-    
-    /* parsing */
-    eval_error("\n 123 @a ", SyntaxError);
-    eval_error("\n  @/*  ", SyntaxError);
-    eval_error("function f  @a", SyntaxError);
-    /* currently regexp syntax errors point to the start of the regexp */
-    eval_error("\n  @/aaa]/u", SyntaxError); 
-
-    /* function definitions */
-    
-    tab = get_string_pos("\n   @function f() { }; f;");
-    e = eval(tab[0]);
-    assert(e.lineNumber, tab[1]);
-    assert(e.columnNumber, tab[2]);
-
-    /* errors */
-    tab = get_string_pos('\n  Error@("hello");');
-    e = eval(tab[0]);
-    check_error_pos(e, Error, tab[1], tab[2]);
-    
-    eval_error('\n  throw Error@("hello");', Error);
-
-    /* operators */
-    eval_error('\n  1 + 2 @* poisoned_number;', Error, 1);
-    eval_error('\n  1 + "café" @* poisoned_number;', Error, 1);
-    eval_error('\n  1 + 2 @** poisoned_number;', Error, 1);
-    eval_error('\n  2 * @+ poisoned_number;', Error, 1);
-    eval_error('\n  2 * @- poisoned_number;', Error, 1);
-    eval_error('\n  2 * @~ poisoned_number;', Error, 1);
-    eval_error('\n  2 * @++ poisoned_number;', Error, 1);
-    eval_error('\n  2 * @-- poisoned_number;', Error, 1);
-    eval_error('\n  2 * poisoned_number @++;', Error, 1);
-    eval_error('\n  2 * poisoned_number @--;', Error, 1);
-
-    /* accessors */
-    eval_error('\n 1 + null@[0];', TypeError); 
-    eval_error('\n 1 + null @. abcd;', TypeError); 
-    eval_error('\n 1 + null @( 1234 );', TypeError);
-    eval_error('var obj = { get a() { throw Error("test"); } }\n 1 + obj @. a;',
-               Error, 1);
-    eval_error('var obj = { set a(b) { throw Error("test"); } }\n obj @. a = 1;',
-               Error, 1);
-
-    /* variables reference */
-    eval_error('\n  1 + @not_def', ReferenceError, 0);
-
-    /* assignments */
-    eval_error('1 + (@not_def = 1)', ReferenceError, 0);
-    eval_error('1 + (@not_def += 2)', ReferenceError, 0);
-    eval_error('var a;\n 1 + (a @+= poisoned_number);', Error, 1);
+    Object.defineProperty(globalThis, 'xxx', {
+            get: function() { throw Error("xxx_get"); },
+            set: function(x) { throw Error("xxx_set"); }
+            });
+    assertThrows(Error, function() { return xxx; });
+    assertThrows(Error, function() { xxx = 1; });
 }
 
 test();
@@ -1128,9 +1088,15 @@ test_regexp();
 test_symbol();
 test_map();
 test_weak_map();
-test_weak_map_cycles();
-test_weak_ref();
-test_finalization_registry();
+test_weak_set();
 test_generator();
-test_rope();
-test_line_column_numbers();
+test_proxy_iter();
+test_proxy_is_array();
+test_finalization_registry();
+test_exception_source_pos();
+test_function_source_pos();
+test_exception_prepare_stack();
+test_exception_stack_size_limit();
+test_exception_capture_stack_trace();
+test_exception_capture_stack_trace_filter();
+test_cur_pc();
