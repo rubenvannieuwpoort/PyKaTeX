@@ -3,11 +3,14 @@ import sys
 
 
 extra_compile_args = []
-define_macros = [("_GNU_SOURCE",), ("CONFIG_VERSION", "\"2025-04-26\"")]
+define_macros = [("CONFIG_VERSION", "\"2025-04-26\"")]
 
 if sys.platform == "win32":
     extra_compile_args += ["/std:c11", "/experimental:c11atomics"]
     define_macros += [("WIN32_LEAN_AND_MEAN",)]
+elif sys.platform == "linux":
+    define_macros += [("_GNU_SOURCE", None)]
+
 
 pykatex_ext = Extension(
     "pykatex",
