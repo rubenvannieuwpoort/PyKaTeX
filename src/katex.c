@@ -26,12 +26,9 @@ static KatexState state = {
 	.has_exception = false,
 };
 
-const char *output_string_values[] = {"html", "mathml", "htmlAndMathml"};
-const char *strict_string_values[] = {"ignore", "warn", "error"};
-
 static void state_initialize(KatexState *state);
 static void state_finalize(KatexState *state);
-const char *state_renderToString(KatexState *state, const char *input, const KatexOptions *c_options);
+char *state_renderToString(KatexState *state, const char *input, const KatexOptions *c_options);
 JSException *state_get_last_js_error(KatexState *state);
 
 JSValue build_js_options(KatexState *state, const KatexOptions *c_options);
@@ -45,7 +42,7 @@ void katex_initialize(void) {
 	state_initialize(&state);
 }
 
-const char *katex_renderToString(const char *input, KatexOptions *c_options) {
+char *katex_renderToString(const char *input, KatexOptions *c_options) {
 	return state_renderToString(&state, input, c_options);
 }
 
@@ -102,7 +99,7 @@ static void state_finalize(KatexState *state) {
 	state->initialized = false;
 }
 
-const char *state_renderToString(KatexState *state, const char *input, const KatexOptions *c_options) {
+char *state_renderToString(KatexState *state, const char *input, const KatexOptions *c_options) {
 	if (!state->initialized) {
 		katex_initialize();
 	}
@@ -180,7 +177,7 @@ JSValue build_js_options(KatexState *state, const KatexOptions *c_options) {
 	state->js_options = JS_NewObject(state->context);
 
 	set_bool_option(state, "displayMode", c_options->display_mode);
-	set_enum_option(state, "output", (int *)c_options->output, output_string_values);
+	set_string_option(state, "output", c_options->output);
 	set_bool_option(state, "leqno", c_options->leqno);
 	set_bool_option(state, "fleqn", c_options->fleqn);
 	set_bool_option(state, "throwOnError", c_options->throw_on_error);
@@ -190,7 +187,8 @@ JSValue build_js_options(KatexState *state, const KatexOptions *c_options) {
 	set_bool_option(state, "colorIsTextColor", c_options->color_is_text_color);
 	set_number_option(state, "maxSize", c_options->max_size);
 	set_number_option(state, "maxExpand", c_options->max_expand);
-	set_enum_option(state, "strict", (int *)c_options->strict, strict_string_values);
+	set_bool_option(state, "strict", c_options->strictBool);
+	set_string_option(state, "strict", c_options->strictStr);
 	set_bool_option(state, "trust", c_options->trust);
 	set_bool_option(state, "globalGroup", c_options->global_group);
 
@@ -231,9 +229,4 @@ static void set_enum_option(KatexState *state, const char *key, const int *value
 	if (value) {
 		set_string_option(state, key, strings[*value]);
 	}
-}
-
-// TODO(Ruben): remove
-void hello(void) {
-	printf("Hello, world!\n");
 }

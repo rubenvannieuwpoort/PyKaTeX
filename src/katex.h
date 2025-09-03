@@ -3,33 +3,22 @@
 
 #include <stdbool.h>
 
-typedef enum {
-  CKATEX_OUTPUT_TYPE_HTML = 0,
-  CKATEX_OUTPUT_TYPE_MATHML,
-  KATEX_OUTPUT_TYPE_HTML_AND_MATHML,
-} KatexOutputType;
-
-typedef enum {
-  CKATEX_STRICT_TYPE_IGNORE = 0,
-  KATEX_STRICT_TYPE_WARN,
-  CKATEX_STRICT_TYPE_ERROR,
-} KatexStrictType;
-
 typedef struct {
-  bool *display_mode;
-  KatexOutputType *output;
-  bool *leqno;
-  bool *fleqn;
-  bool *throw_on_error;
+  const bool *display_mode;
+  const char *output;
+  const bool *leqno;
+  const bool *fleqn;
+  const bool *throw_on_error;
   const char *error_color;
   // TODO: macros
   const double *min_rule_thickness;
-  bool *color_is_text_color;
+  const bool *color_is_text_color;
   const double *max_size;
-  double *max_expand;
-  KatexStrictType *strict;
-  bool *trust;
-  bool *global_group;
+  const double *max_expand;
+  const bool *strictBool;
+  const char *strictStr;
+  const bool *trust;
+  const bool *global_group;
 } KatexOptions;
 
 typedef struct {
@@ -38,10 +27,8 @@ typedef struct {
 } JSException;
 
 void katex_initialize(void);
-const char *katex_renderToString(const char *input, KatexOptions *options);
+char *katex_renderToString(const char *input, KatexOptions *options);
 JSException *katex_get_last_error(void);
 void katex_finalize(void);
-
-void hello(void);  // TODO(Ruben): remove
 
 #endif
