@@ -3,6 +3,9 @@
 
 #include "katex.h"
 
+
+static PyObject *ParseError;
+
 // wrapper for Python
 static PyObject* py_renderToString(PyObject *self, PyObject *args, PyObject *kwargs) {
     KatexOptions katex_options = {0};
@@ -84,6 +87,12 @@ static PyObject* py_renderToString(PyObject *self, PyObject *args, PyObject *kwa
     // printf("input is %s\n", input);
 
     char *c_result = katex_renderToString(input, &katex_options);
+    if (c_result == NULL) {
+        JSException *exception = katex_get_last_error();
+        PyErr_SetString(ParseError, exception->message);
+        return NULL;
+    }
+
     PyObject *result = PyUnicode_FromString(c_result);
     if (result == NULL) {
         return NULL;
@@ -138,6 +147,13 @@ PyMODINIT_FUNC PyInit_pykatex(void) {
         Py_DECREF(m);
         return NULL;
     }
+
+    ParseError = PyErr_NewException("pykatex.ParseError", NULL, NULL);
+    if (ParseError == NULL) {
+        return NULL;
+    }
+    Py_INCREF(ParseError);
+    PyModule_AddObject(m, "ParseError", ParseError);
 
     return m;
 }
