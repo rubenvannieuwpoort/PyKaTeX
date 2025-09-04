@@ -29,67 +29,41 @@ PyKaTeX provides a single function `renderToString` that takes a LaTeX string an
 pykatex.renderToString(input, **options)
 ```
 
-It can be used as follows.
-
+It can be used as follows:
 ```python
 import pykatex as katex
 
-# Basic usage
-html = katex.renderToString("E = mc^2", output="html")
+html = katex.renderToString("E = mc^2",
+                            displayMath=True,
+                            output="html")
+
 print(html)
 ```
 
-In PyKaTex, the options are passed to `renderToString` as optional keyword arguments that are mostly compatible with the [KaTeX options](https://katex.org/docs/options), with the following exceptions:
+Refer to the [KaTeX documentation](https://katex.org/docs/options) for the available options and their defaults.
+
+Currently, there are the following limitations:
 -  The `macros` option is not yet implemented
 - Currently only string and boolean values are supported for the `strict` option (functions are not supported)
 
-Note that you'll need to include KaTeX CSS in your HTML for proper rendering when using HTML output.
 
+## Using the output
 
-### Options
+To view the rendered formula, you need to include KaTeX CSS in your HTML. You can use the following template:
+```
+<!-- KaTeX requires the use of the HTML5 doctype. Without it, KaTeX may not render properly -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" integrity="sha384-5TcZemv2l/9On385z///+d7MSYlvIEw9FuZTIdZ14vJLqWphw7e7ZPuOiCHJcFCP" crossorigin="anonymous">
+  </head>
+  <body>
+    <!-- include the output from renderToString here -->
+  </body>
+</html>
+```
 
-#### Output Options
-- `output` (str): Output format. Options:
-  - `"html"` (default): HTML with CSS classes
-  - `"mathml"`: MathML markup  
-  - `"htmlAndMathml"`: Both HTML and MathML
-  
-  You can also use the provided constants:
-  ```python
-  import pykatex
-  html = pykatex.renderToString("x^2", output=pykatex.OUTPUT_HTML)
-  mathml = pykatex.renderToString("x^2", output=pykatex.OUTPUT_MATHML)
-  both = pykatex.renderToString("x^2", output=pykatex.OUTPUT_HTMLANDMATHML)
-  ```
-
-
-#### Display Options
-- `displayMode` (bool): Render in display mode (centered, larger). Default: `False`
-- `leqno` (bool): Place equation numbers on the left. Default: `False`
-- `fleqn` (bool): Left-align equations in display mode. Default: `False`
-
-
-#### Error Handling
-- `throwOnError` (bool): Throw an exception on parsing errors. Default: `True`
-- `errorColor` (str): Color for error messages. Default: `"#cc0000"`
-
-
-#### Styling
-- `minRuleThickness` (float): Minimum thickness of rules/lines
-- `colorIsTextColor` (bool): Use text color for styling. Default: `False`
-- `maxSize` (float): Maximum allowed size multiplier
-- `maxExpand` (float): Maximum number of macro expansions
-
-
-#### Security & Behavior  
-- `strict` (str or bool): Error reporting level:
-  - `"warn"`: Log warnings for unrecognized commands
-  - `"error"`: Throw errors for unrecognized commands  
-  - `"ignore"`: Silently ignore unrecognized commands
-  - `True`: Same as `"error"`
-  - `False`: Same as `"ignore"`
-- `trust` (bool): Allow potentially unsafe commands. Default: `False`
-- `globalGroup` (bool): Place definitions in global scope. Default: `False`
+The stylesheet `katex.min.css` that the template links to is also vendored in the source here, as `src/katex/katex.min.css`. You can also host it yourself and use that, if you like.
 
 
 ## Architecture
