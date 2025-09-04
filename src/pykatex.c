@@ -126,7 +126,18 @@ PyMODINIT_FUNC PyInit_pykatex(void) {
         return NULL;
     }
 
-    // TODO(Ruben): add string constants for 'strict' argument
+    if (PyModule_AddStringConstant(m, "STRICT_IGNORE", "ignore") < 0) {
+        Py_DECREF(m);
+        return NULL;
+    }
+    if (PyModule_AddStringConstant(m, "STRICT_WARN", "warn") < 0) {
+        Py_DECREF(m);
+        return NULL;
+    }
+    if (PyModule_AddStringConstant(m, "STRICT_ERROR", "error") < 0) {
+        Py_DECREF(m);
+        return NULL;
+    }
 
     return m;
 }
