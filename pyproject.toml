@@ -8,8 +8,7 @@ version = "0.0.1"
 description = "A Python wrapper for the [KaTeX](https://katex.org/) library, providing fast server-side rendering of mathematical expressions."
 readme = "README.md"
 requires-python = ">=3"
-license = { text = "MIT" }
-license-files = ["LICENSE"]
+license = { file = "LICENSE" }
 authors = [
   {name = "Ruben van Nieuwpoort", email = "ruben@vannieuwpoort.dev"},
 ]
