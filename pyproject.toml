@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pykatex"
-version = "0.0.5"
+version = "0.0.6"
 description = "A Python wrapper for the [KaTeX](https://katex.org/) library, providing fast server-side rendering of mathematical expressions."
 readme = "README.md"
 requires-python = ">=3"
