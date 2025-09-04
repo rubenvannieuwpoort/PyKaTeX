@@ -23,14 +23,14 @@ jobs:
       run: python -m cibuildwheel --output-dir wheelhouse
       env:
         CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
-        CIBW_SKIP: "pp* *-win32"
+        CIBW_SKIP: "*-win32"
         CIBW_ARCHS_MACOS: universal2
         CIBW_ARCHS_LINUX: x86_64 aarch64
         CIBW_ARCHS_WINDOWS: AMD64
     - name: Upload wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.os }}
         path: ./wheelhouse/*.whl
 
   build-sdist:
