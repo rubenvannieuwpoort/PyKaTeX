@@ -2,12 +2,9 @@
 
 A Python wrapper for the [KaTeX](https://katex.org/) library, providing fast server-side rendering of mathematical expressions.
 
-PyKaTeX uses a C extension module with [QuickJS-NG](https://github.com/quickjs-ng/quickjs) to enable Python to call into KaTeX, which is written in Javascript.
+PyKaTeX uses a C extension module with [QuickJS-NG](https://github.com/quickjs-ng/quickjs) to enable Python to call into KaTeX, which is written in Javascript. The current version of PyKaTeX uses KaTeX v0.16.22 and QuickJS-NG v0.10.1.
 
-
-## Versions
-
-The current version of PyKaTeX uses KaTeX v0.16.22 and QuickJS-NG v0.10.1.
+⚠️ **PyKaTex is currently in alpha**. Some options are only partially supported  (see the "usage" section for more information) and KaTeX exceptions are not handled gracefully yet.
 
 
 ## Installation
@@ -15,6 +12,13 @@ The current version of PyKaTeX uses KaTeX v0.16.22 and QuickJS-NG v0.10.1.
 ```bash
 pip install pykatex
 ```
+
+Or, to install from source, clone the repository and run
+```bash
+pip install .
+```
+
+in the root of this repository.
 
 
 ## Usage
