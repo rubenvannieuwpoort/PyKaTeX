@@ -121,7 +121,7 @@ PyMODINIT_FUNC PyInit_pykatex(void) {
         Py_DECREF(m);
         return NULL;
     }
-    if (PyModule_AddStringConstant(m, "OUTPUT_HTMLANDMATHML", "htmlAndMathml") < 0) {
+    if (PyModule_AddStringConstant(m, "OUTPUT_HTML_AND_MATHML", "htmlAndMathml") < 0) {
         Py_DECREF(m);
         return NULL;
     }
