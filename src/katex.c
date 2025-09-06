@@ -36,7 +36,6 @@ static void free_option_values(KatexState *state, JSValue js_options);
 static void set_bool_option(KatexState *state, const char *key, const bool *value);
 static void set_number_option(KatexState *state, const char *key, const double *value);
 static void set_string_option(KatexState *state, const char *key, const char *value);
-static void set_enum_option(KatexState *state, const char *key, const int *value, const char **strings);
 
 void katex_initialize(void) {
 	state_initialize(&state);
@@ -158,8 +157,8 @@ JSException *state_get_last_js_error(KatexState *state) {
 		JSAtom name_atom = JS_NewAtom(state->context, "name");
 		JSAtom message_atom = JS_NewAtom(state->context, "message");
 		if (JS_HasProperty(state->context, exception, name_atom) && JS_HasProperty(state->context, exception, message_atom)) {
-			JSValue js_name = JS_GetPropertyStr(state->context, exception, "name");
-			JSValue js_message = JS_GetPropertyStr(state->context, exception, "message");
+			JSValue js_name = JS_GetProperty(state->context, exception, name_atom);
+			JSValue js_message = JS_GetProperty(state->context, exception, message_atom);
 			state->exception.name = JS_ToCString(state->context, js_name);
 			state->exception.message = JS_ToCString(state->context, js_message);
 			JS_FreeValue(state->context, js_name);
@@ -222,11 +221,5 @@ static void set_string_option(KatexState *state, const char *key, const char *va
 	if (value) {
 		JSValue option = JS_NewString(state->context, value);
 		JS_SetPropertyStr(state->context, state->js_options, key, option);
-	}
-}
-
-static void set_enum_option(KatexState *state, const char *key, const int *value, const char **strings) {
-	if (value) {
-		set_string_option(state, key, strings[*value]);
 	}
 }
