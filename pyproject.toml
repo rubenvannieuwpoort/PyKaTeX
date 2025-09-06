@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ version = "0.0.7"
 description = "A Python wrapper for the [KaTeX](https://katex.org/) library, providing fast server-side rendering of mathematical expressions."
 readme = "README.md"
 requires-python = ">=3"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
   {name = "Ruben van Nieuwpoort", email = "ruben@vannieuwpoort.dev"},
 ]
