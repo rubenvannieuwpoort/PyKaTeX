@@ -41,7 +41,7 @@ static PyObject* py_renderToString(PyObject *self, PyObject *args, PyObject *kwa
     if (minRuleThicknessObj != NULL) {
         double minRuleThickness = PyFloat_AsDouble(minRuleThicknessObj);
         if (PyErr_Occurred() != NULL) {
-            return NULL;  // TODO(Ruben): error message
+            return NULL;
         }
         katex_options.min_rule_thickness = &minRuleThickness;
     }
@@ -51,14 +51,14 @@ static PyObject* py_renderToString(PyObject *self, PyObject *args, PyObject *kwa
     if (maxSizeObj != NULL) {
         double maxSize = PyFloat_AsDouble(maxSizeObj);
         if (PyErr_Occurred() != NULL) {
-            return NULL;  // TODO(Ruben): error message
+            return NULL;
         }
         katex_options.max_size = &maxSize;
     }
     if (maxExpandObj != NULL) {
         double maxExpand = PyFloat_AsDouble(maxExpandObj);
         if (PyErr_Occurred() != NULL) {
-            return NULL;  // TODO(Ruben): error message
+            return NULL;
         }
         katex_options.max_expand = &maxExpand;
     }
@@ -71,7 +71,7 @@ static PyObject* py_renderToString(PyObject *self, PyObject *args, PyObject *kwa
     } else if (strictObj != NULL && PyBool_Check(strictObj)) {
         katex_options.strictBool = strictObj == Py_True ? &t : &f;
     } else if (strictObj != NULL) {
-        PyErr_SetString(PyExc_TypeError, "argument must be str or bool");  // TODO(Ruben): better error message
+        PyErr_SetString(PyExc_TypeError, "argument 'strict' must have str or bool value");
         return NULL;
     }
     if (trustObj) {
@@ -84,12 +84,14 @@ static PyObject* py_renderToString(PyObject *self, PyObject *args, PyObject *kwa
         katex_options.global_group = globalGroupObj == Py_True ? &t : &f;
     }
 
-    // printf("input is %s\n", input);
-
     char *c_result = katex_renderToString(input, &katex_options);
     if (c_result == NULL) {
         JSException *exception = katex_get_last_error();
-        PyErr_SetString(ParseError, exception->message);
+
+        // KaTeX always reports parse errors, and its messages begin with "KaTeX parse error: "
+        // Since Python exceptions already include the exception type in their prefix, we strip
+        // this redundant prefix by passing a pointer to exception->message + 19
+        PyErr_SetString(ParseError, &exception->message[19]);
         return NULL;
     }
 
