@@ -1,4 +1,5 @@
 build/
-src/pykatex.egg-info/
 dist/
+src/PyKaTeX.egg-info/
+src/*.so
 
